@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CakeBot Control Panel</title>
+
+<style>
+:root {
+  --accent-green: #28B463;
+  --accent-blue: #4285f4;
+  --accent-red: #e74c3c;
+  --accent-gray: #6c757d;
+}
+
+body {
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  background: linear-gradient(135deg, #cce5ff, #e5d6ff);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* STATUS BAR */
+.status-bar {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.7rem;
+  width: 100%;
+  color: white;
+  transition: 0.3s;
+}
+.status-bar.off { background: #555; }
+.status-bar.on { background: #28b463; box-shadow: 0 0 6px #28b463; }
+.status-bar.notcalibrated { background: #f1c40f; box-shadow: 0 0 6px #f1c40f; color: #000; }
+.status-bar.printing { background: var(--accent-blue); box-shadow: 0 0 6px var(--accent-blue); }
+.status-bar.emergency { background: #ff1a1a; box-shadow: 0 0 8px #ff0000; }
+
+/* MAIN */
+main {
+  max-width: 950px;
+  width: 90%;
+  margin-top: 1.2rem;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  padding: 1.2rem;
+}
+
+/* CONTROL PANEL */
+.system-controls {
+  display: flex; justify-content: space-between;
+  align-items: center; flex-wrap: wrap;
+  gap: 1rem; margin-bottom: 1.5rem;
+}
+.buttons { display: flex; gap: 0.7rem; }
+
+button {
+  border: none; border-radius: 6px;
+  cursor: pointer; font-weight: 600;
+  color: white; transition: all 0.2s;
+  padding: 0.6rem 1.3rem;
+}
+button:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.8); }
+
+#calibrate { background: var(--accent-blue); }
+#print { background: var(--accent-green); }
+#reset { background: var(--accent-blue); }
+#emergency { background: var(--accent-red); }
+
+#calibrate:hover { background: #2c6ed4; }
+#print:hover { background: #239a55; }
+#reset:hover { background: #2c6ed4; }
+#emergency.active { background: #ff1a1a; box-shadow: 0 0 10px #ff0000; }
+
+/* POWER ICON */
+#power {
+  background: #333;
+  font-size: 1.4rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 50%;
+  width: 46px; height: 46px;
+  text-align: center; color: white;
+  line-height: 1.3; transition: 0.3s;
+}
+#power.active { background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+
+/* Right control cluster */
+.status-cluster {
+  display: flex; align-items: center;
+  flex-wrap: wrap; justify-content: flex-end;
+  gap: 0.9rem;
+}
+
+.led {
+  display: flex; align-items: center; gap: .4rem; font-size: 0.9rem;
+}
+
+.led-indicator {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: red; box-shadow: 0 0 6px red;
+}
+#calLed.off { background: #b00; box-shadow: 0 0 6px #b00; }
+#calLed.on { background: #28b463; box-shadow: 0 0 6px #28b463; }
+
+/* VIEWPORT */
+.viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1/1;
+  background: radial-gradient(circle at center, #f2f2f2 0%, #d8d8d8 100%);
+  border: 2px solid #555;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.camera-sim {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.2), rgba(255,255,255,0));
+  background-size: 200% 100%;
+  animation: shimmer 4s infinite linear;
+  pointer-events: none;
+}
+@keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
+
+.text-overlay {
+  position: absolute; top: 35%; left: 30%;
+  font-size: 32px; font-weight: 700; color: #222;
+  background-color: rgba(255,255,255,0.6);
+  padding: 8px 12px; border: 1px dashed #333;
+  cursor: move; user-select: none; border-radius: 4px;
+}
+.resize-handle {
+  position: absolute; bottom: 2px; right: 2px;
+  width: 12px; height: 12px; background: #555;
+  border-radius: 2px; cursor: se-resize;
+}
+
+/* TEXT CONFIG */
+.text-config {
+  display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: space-between;
+  gap: 1rem; background: #f9fafc;
+  border-top: 1px solid #dcdcdc;
+  padding: 1rem; margin-top: 1rem;
+  border-radius: 0 0 8px 8px;
+}
+.form-field { display: flex; flex-direction: column; gap: 0.3rem; }
+
+label { font-weight: 700; font-size: 0.95rem; }
+select, textarea {
+  border: 1px solid #bbb; border-radius: 6px;
+  padding: 0.4rem; font-size: 0.95rem;
+  font-family: inherit; background: #fff;
+}
+
+#fontSelect option[value*="Comic"]{font-family:"Comic Sans MS",cursive;}
+#fontSelect option[value="cursive"]{font-family:cursive;}
+#fontSelect option[value*="Courier"]{font-family:"Courier New",monospace;}
+#fontSelect option[value="serif"]{font-family:serif;}
+#fontSelect option[value="sans-serif"]{font-family:sans-serif;}
+#fontSelect option[value*="Helve"]{font-family:Helvetica,sans-serif;}
+input[type="range"]{width:160px;}
+#generate { background: var(--accent-green); color:white; font-weight:700; font-size:1rem;
+  padding:0.6rem 1.2rem; border-radius:6px; border:none; cursor:pointer; transition:0.2s; }
+#generate:hover{background:#239a55;}
+
+/* SETTINGS BUTTON */
+#settingsBtn {
+  margin: 2rem auto 1rem;
+  background: var(--accent-blue);
+  color: white;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  padding: 0.7rem 2.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: 0.3s;
+  display: block;
+}
+#settingsBtn:hover {
+  background: #2c6ed4;
+  box-shadow: 0 0 8px #2c6ed4;
+}
+
+@media(max-width:800px){
+  .status-cluster{flex-direction:column;align-items:flex-start;}
+  .text-config{flex-direction:column;align-items:stretch;}
+  #settingsBtn{width:100%;}
+}
+</style>
+</head>
+
+<body>
+
+<!-- Status Bar -->
+<div id="statusBar" class="status-bar off">SYSTEM OFF</div>
+
+<main>
+  <!-- Controls -->
+  <div class="system-controls">
+    <div class="buttons">
+      <button id="calibrate" disabled>Calibrate</button>
+      <button id="print" disabled>Print Cake</button>
+    </div>
+
+    <div class="status-cluster">
+      <div class="led">
+        <div class="led-indicator" id="led"></div><span id="led-status">System off</span>
+      </div>
+      <div class="led">
+        <div id="calLed" class="led-indicator off"></div><span id="cal-status">Not Calibrated</span>
+      </div>
+      <button id="power">⏻</button>
+      <button id="reset">Reset</button>
+      <button id="emergency">Emergency Stop</button>
+    </div>
+  </div>
+
+  <!-- Viewport -->
+  <div class="viewport" id="viewport">
+    <div class="camera-sim"></div>
+    <div class="text-overlay" id="textOverlay" contenteditable="true">
+      Happy Birthday!
+      <div class="resize-handle" id="resizeHandle"></div>
+    </div>
+  </div>
+
+  <!-- Text Config -->
+  <section class="text-config">
+    <div class="form-field">
+      <label for="fontSelect">Font:</label>
+      <select id="fontSelect">
+        <option value="'Comic Sans MS', cursive">Comic Sans</option>
+        <option value="cursive">Cursive</option>
+        <option value="'Courier New', monospace">Courier</option>
+        <option value="serif">Serif</option>
+        <option value="sans-serif" selected>Helve Cursive</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="fontSizeRange">Font Size:</label>
+      <input id="fontSizeRange" type="range" min="8" max="120" step="1" value="32" />
+    </div>
+    <div class="form-field" style="flex:2;">
+      <label for="cakeText">Cake Text:</label>
+      <textarea id="cakeText" placeholder="add text"></textarea>
+    </div>
+    <button id="generate">Generate Text</button>
+  </section>
+</main>
+
+<!-- SETTINGS BUTTON -->
+<button id="settingsBtn">Settings</button>
+
+<script>
+const statusBar=document.getElementById('statusBar'),
+led=document.getElementById('led'),calLed=document.getElementById('calLed'),
+calStatus=document.getElementById('cal-status'),ledStatus=document.getElementById('led-status'),
+powerBtn=document.getElementById('power'),resetBtn=document.getElementById('reset'),
+calibrateBtn=document.getElementById('calibrate'),printBtn=document.getElementById('print'),
+emergencyBtn=document.getElementById('emergency'),
+textOverlay=document.getElementById('textOverlay'),resizeHandle=document.getElementById('resizeHandle'),
+fontSelect=document.getElementById('fontSelect'),fontSizeRange=document.getElementById('fontSizeRange'),
+cakeText=document.getElementById('cakeText'),generateBtn=document.getElementById('generate'),
+viewport=document.getElementById('viewport'),settingsBtn=document.getElementById('settingsBtn');
+
+let powerOn=false,calibrated=false,emergencyActive=false;
+let isDragging=false,isResizing=false,offsetX=0,offsetY=0,startX=0,startY=0,currentFontSize=32;
+
+function updateStatusBar(){
+  if(emergencyActive){statusBar.textContent="EMERGENCY STOP";statusBar.className="status-bar emergency";return;}
+  if(!powerOn){statusBar.textContent="SYSTEM OFF";statusBar.className="status-bar off";return;}
+  if(powerOn&&!calibrated){statusBar.textContent="SYSTEM ON — NOT CALIBRATED";statusBar.className="status-bar notcalibrated";return;}
+  statusBar.textContent="SYSTEM READY";statusBar.className="status-bar on";
+}
+
+powerBtn.addEventListener('click',()=>{
+  powerOn=!powerOn;
+  powerBtn.classList.toggle('active',powerOn);
+  calibrateBtn.disabled = !powerOn;
+  printBtn.disabled = true;
+  resetBtn.disabled = !powerOn;
+  emergencyBtn.disabled = !powerOn;
+  if(powerOn){
+    led.style.background='yellow';led.style.boxShadow='0 0 6px yellow';
+    ledStatus.textContent='System ON';
+  }else{
+    emergencyActive=false;calibrated=false;
+    calLed.className='led-indicator off';calStatus.textContent='Not Calibrated';
+    calibrateBtn.disabled=true;printBtn.disabled=true;emergencyBtn.classList.remove('active');
+    led.style.background='red';led.style.boxShadow='0 0 6px red';
+    ledStatus.textContent='System OFF';
+    textOverlay.style.top='35%';
+    textOverlay.style.left='30%';
+    textOverlay.style.fontSize='32px';
+    textOverlay.style.fontFamily='sans-serif';
+    cakeText.value='';fontSizeRange.value=32;
+  }
+  updateStatusBar();
+});
+
+calibrateBtn.addEventListener('click',()=>{
+  if(!powerOn||emergencyActive)return alert('Cannot calibrate now.');
+  calibrated=true;
+  calLed.className='led-indicator on';calStatus.textContent='Calibrated';
+  led.style.background='limegreen';led.style.boxShadow='0 0 6px limegreen';
+  printBtn.disabled=false;
+  updateStatusBar();
+});
+
+printBtn.addEventListener('click',()=>{
+  if(!powerOn||!calibrated||emergencyActive){
+    alert('Cannot print — ensure power on, calibrated, no emergency.');
+    return;
+  }
+  statusBar.textContent='PRINTING IN PROGRESS';
+  statusBar.className='status-bar printing';
+  textOverlay.style.display='none';
+  led.style.background='blue';led.style.boxShadow='0 0 6px blue';
+  setTimeout(()=>{
+    led.style.background='limegreen';led.style.boxShadow='0 0 6px limegreen';
+    textOverlay.style.display='block';
+    updateStatusBar();
+  },2000);
+});
+
+resetBtn.addEventListener('click',()=>{
+  if(!powerOn)return;
+  emergencyActive=false;calibrated=false;
+  calLed.className='led-indicator off';calStatus.textContent='Not Calibrated';
+  printBtn.disabled=true;emergencyBtn.classList.remove('active');
+  led.style.background='yellow';led.style.boxShadow='0 0 6px yellow';
+  ledStatus.textContent='System ON';
+  textOverlay.style.top='35%';textOverlay.style.left='30%';
+  textOverlay.style.fontSize='32px';textOverlay.style.fontFamily='sans-serif';
+  cakeText.value='';fontSizeRange.value=32;
+  updateStatusBar();
+});
+
+emergencyBtn.addEventListener('click',()=>{
+  emergencyActive=!emergencyActive;
+  emergencyBtn.classList.toggle('active',emergencyActive);
+  if(emergencyActive){
+    led.style.background='red';led.style.boxShadow='0 0 8px red';
+    ledStatus.textContent='Emergency STOP!';
+    calibrateBtn.disabled=true;printBtn.disabled=true;
+  }else{
+    calibrateBtn.disabled=!powerOn;printBtn.disabled=!calibrated;
+    led.style.background=powerOn?'yellow':'red';
+    led.style.boxShadow='0 0 6px '+(powerOn?'yellow':'red');
+    ledStatus.textContent=powerOn?'System ON':'System OFF';
+  }
+  updateStatusBar();
+});
+
+settingsBtn.addEventListener('click',()=>alert("Settings panel coming soon!"));
+
+function applyFontSize(size){
+  size=Math.min(size,computeMaxFontSize());
+  textOverlay.style.fontSize=size+'px';
+  fontSizeRange.value=size;
+}
+function computeMaxFontSize(){
+  const temp=document.createElement('div');
+  temp.style.position='absolute';
+  temp.style.visibility='hidden';
+  temp.style.fontFamily=window.getComputedStyle(textOverlay).fontFamily;
+  temp.style.fontWeight='700';
+  temp.style.whiteSpace='nowrap';
+  temp.textContent=textOverlay.textContent||'Test';
+  viewport.appendChild(temp);
+  const vw=viewport.clientWidth*0.9,vh=viewport.clientHeight*0.9;
+  let testSize=8;
+  while(testSize<300){temp.style.fontSize=testSize+'px';if(temp.scrollWidth>vw||temp.scrollHeight>vh)break;testSize+=2;}
+  viewport.removeChild(temp);
+  return testSize-2;
+}
+fontSelect.addEventListener('change',()=>{textOverlay.style.fontFamily=fontSelect.value;applyFontSize(parseInt(fontSizeRange.value));});
+fontSizeRange.addEventListener('input',e=>applyFontSize(e.target.value));
+generateBtn.addEventListener('click',()=>{textOverlay.textContent=cakeText.value||'Your Text Here';textOverlay.appendChild(resizeHandle);applyFontSize(parseInt(fontSizeRange.value));});
+
+textOverlay.addEventListener('mousedown',e=>{if(e.target===resizeHandle)return;isDragging=true;const r=textOverlay.getBoundingClientRect();offsetX=e.clientX-r.left;offsetY=e.clientY-r.top;});
+window.addEventListener('mouseup',()=>{isDragging=false;isResizing=false;});
+window.addEventListener('mousemove',e=>{
+  const rect=viewport.getBoundingClientRect();
+  if(isDragging){
+    let x=e.clientX-offsetX-rect.left;let y=e.clientY-offsetY-rect.top;
+    x=Math.max(0,Math.min(x,rect.width-textOverlay.offsetWidth));
+    y=Math.max(0,Math.min(y,rect.height-textOverlay.offsetHeight));
+    textOverlay.style.left=x+'px';textOverlay.style.top=y+'px';
+  }
+  if(isResizing){
+    const dx=e.clientX-startX,dy=e.clientY-startY;
+    currentFontSize=Math.max(8,currentFontSize+(dx+dy)/4);
+    applyFontSize(Math.round(currentFontSize));
+  }
+});
+resizeHandle.addEventListener('mousedown',e=>{e.stopPropagation();isResizing=true;startX=e.clientX;startY=e.clientY;currentFontSize=parseInt(window.getComputedStyle(textOverlay).fontSize);});
+
+applyFontSize(32);
+updateStatusBar();
+</script>
+</body>
+</html>
