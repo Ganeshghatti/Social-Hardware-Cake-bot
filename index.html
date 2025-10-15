@@ -403,6 +403,11 @@ window.addEventListener('mousemove',e=>{
 resizeHandle.addEventListener('mousedown',e=>{e.stopPropagation();isResizing=true;startX=e.clientX;startY=e.clientY;currentFontSize=parseInt(window.getComputedStyle(textOverlay).fontSize);});
 
 applyFontSize(32);
+// Ensure all control buttons are disabled on initial load
+calibrateBtn.disabled = true;
+printBtn.disabled = true;
+resetBtn.disabled = true;
+emergencyBtn.disabled = true;
 updateStatusBar();
 </script>
 </body>
